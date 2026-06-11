@@ -1,0 +1,29 @@
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Docker
+docker-compose.override.yml
+
+# Laravel / app
+src/.env
+src/vendor/
+src/node_modules/
+src/public/storage
+src/storage/logs/
+src/storage/framework/cache/
+src/storage/framework/sessions/
+src/storage/framework/views/
+src/bootstrap/cache/*.php
+!src/bootstrap/cache/.gitignore
+
+# SQLite
+src/database/database.sqlite
+
+# Logs
+*.log
