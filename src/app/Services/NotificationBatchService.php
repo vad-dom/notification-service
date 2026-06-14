@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\DTO\NotificationBatchCreationResult;
 use App\Enums\NotificationStatus;
 use App\Enums\NotificationType;
 use App\Models\NotificationBatch;
@@ -13,7 +14,7 @@ readonly class NotificationBatchService
         private NotificationPublisher $publisher
     ) {}
 
-    public function create(array $data, string $idempotencyKey): NotificationBatch
+    public function create(array $data, string $idempotencyKey): NotificationBatchCreationResult
     {
         return DB::transaction(function () use ($data, $idempotencyKey) {
             $existingBatch = NotificationBatch::query()
@@ -21,7 +22,10 @@ readonly class NotificationBatchService
                 ->first();
 
             if ($existingBatch) {
-                return $existingBatch->loadCount('notifications');
+                return new NotificationBatchCreationResult(
+                    batch: $existingBatch->loadCount('notifications'),
+                    created: false,
+                );
             }
 
             $type = NotificationType::from($data['type']);
@@ -50,7 +54,10 @@ readonly class NotificationBatchService
                 ]);
             }
 
-            return $batch->loadCount('notifications');
+            return new NotificationBatchCreationResult(
+                batch: $batch->loadCount('notifications'),
+                created: true,
+            );
         });
     }
 }

@@ -15,13 +15,17 @@ class NotificationController extends Controller
         StoreNotificationBatchRequest $request,
         NotificationBatchService $service
     ): JsonResponse {
-        $batch = $service->create(
+        $result = $service->create(
             $request->validated(),
             $request->header('Idempotency-Key')
         );
 
-        return (new NotificationBatchResource($batch))
+        $statusCode = $result->created
+            ? Response::HTTP_CREATED
+            : Response::HTTP_OK;
+
+        return (new NotificationBatchResource($result->batch))
             ->response()
-            ->setStatusCode(Response::HTTP_CREATED);
+            ->setStatusCode($statusCode);
     }
 }
