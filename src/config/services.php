@@ -39,4 +39,8 @@ return [
         'token' => env('PROVIDER_EVENT_TOKEN'),
     ],
 
+    'api' => [
+        'token' => env('API_TOKEN'),
+    ],
+
 ];
