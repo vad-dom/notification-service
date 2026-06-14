@@ -19,11 +19,22 @@ services:
       app-init:
         condition: service_completed_successfully
 
-  worker:
+  worker-critical:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
-    command: php artisan queue:work --queue=notifications --tries=3 --sleep=1
+    command: php artisan queue:work --queue=notifications.critical --tries=3 --sleep=1
+    volumes:
+      - ./src:/var/www/html
+    depends_on:
+      app-init:
+        condition: service_completed_successfully
+
+  worker-default:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    command: php artisan queue:work --queue=notifications.default --tries=3 --sleep=1
     volumes:
       - ./src:/var/www/html
     depends_on:

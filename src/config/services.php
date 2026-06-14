@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'provider_event' => [
+        'token' => env('PROVIDER_EVENT_TOKEN'),
+    ],
+
 ];

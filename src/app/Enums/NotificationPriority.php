@@ -4,6 +4,6 @@ namespace App\Enums;
 
 enum NotificationPriority: int
 {
-    case Marketing = 1;
-    case Transactional = 10;
+    case Normal = 1;
+    case Urgent = 10;
 }

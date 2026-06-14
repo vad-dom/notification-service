@@ -2,14 +2,17 @@
 
 namespace App\Services;
 
-use App\Enums\NotificationPriority;
 use App\Enums\NotificationStatus;
 use App\Enums\NotificationType;
 use App\Models\NotificationBatch;
 use Illuminate\Support\Facades\DB;
 
-class NotificationBatchService
+readonly class NotificationBatchService
 {
+    public function __construct(
+        private NotificationPublisher $publisher
+    ) {}
+
     public function create(array $data, string $idempotencyKey): NotificationBatch
     {
         return DB::transaction(function () use ($data, $idempotencyKey) {
@@ -18,30 +21,36 @@ class NotificationBatchService
                 ->first();
 
             if ($existingBatch) {
-                return $existingBatch->load('notifications');
+                return $existingBatch->loadCount('notifications');
             }
+
+            $type = NotificationType::from($data['type']);
 
             $batch = NotificationBatch::query()->create([
                 'channel' => $data['channel'],
-                'type' => $data['type'],
+                'type' => $type,
                 'message' => $data['message'],
                 'idempotency_key' => $idempotencyKey,
             ]);
 
-            $priority = $data['type'] === NotificationType::Transactional->value
-                ? NotificationPriority::Transactional
-                : NotificationPriority::Marketing;
+            $priority = $type->priority();
 
             foreach ($data['recipient_ids'] as $recipientId) {
-                $batch->notifications()->create([
+                $notification = $batch->notifications()->create([
                     'recipient_id' => $recipientId,
-                    'status' => NotificationStatus::Queued,
+                    'status' => NotificationStatus::Pending,
                     'priority' => $priority,
+                ]);
+
+                $this->publisher->publish($notification);
+
+                $notification->update([
+                    'status' => NotificationStatus::Queued,
                     'queued_at' => now(),
                 ]);
             }
 
-            return $batch->load('notifications');
+            return $batch->loadCount('notifications');
         });
     }
 }
