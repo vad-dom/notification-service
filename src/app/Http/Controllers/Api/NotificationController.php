@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\DTO\CreateNotificationBatchData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreNotificationBatchRequest;
 use App\Http\Resources\NotificationBatchResource;
@@ -16,7 +17,7 @@ class NotificationController extends Controller
         NotificationBatchService $service
     ): JsonResponse {
         $result = $service->create(
-            $request->validated(),
+            CreateNotificationBatchData::fromArray($request->validated()),
             $request->header('Idempotency-Key')
         );
 

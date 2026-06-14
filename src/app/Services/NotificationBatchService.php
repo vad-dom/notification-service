@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\DTO\CreateNotificationBatchData;
 use App\DTO\NotificationBatchCreationResult;
 use App\Enums\NotificationStatus;
-use App\Enums\NotificationType;
 use App\Models\NotificationBatch;
 use Illuminate\Support\Facades\DB;
 
@@ -14,7 +14,7 @@ readonly class NotificationBatchService
         private NotificationPublisher $publisher
     ) {}
 
-    public function create(array $data, string $idempotencyKey): NotificationBatchCreationResult
+    public function create(CreateNotificationBatchData $data, string $idempotencyKey): NotificationBatchCreationResult
     {
         return DB::transaction(function () use ($data, $idempotencyKey) {
             $existingBatch = NotificationBatch::query()
@@ -28,18 +28,18 @@ readonly class NotificationBatchService
                 );
             }
 
-            $type = NotificationType::from($data['type']);
+            $type = $data->type;
 
             $batch = NotificationBatch::query()->create([
-                'channel' => $data['channel'],
+                'channel' => $data->channel,
                 'type' => $type,
-                'message' => $data['message'],
+                'message' => $data->message,
                 'idempotency_key' => $idempotencyKey,
             ]);
 
             $priority = $type->priority();
 
-            foreach ($data['recipient_ids'] as $recipientId) {
+            foreach ($data->recipientIds as $recipientId) {
                 $notification = $batch->notifications()->create([
                     'recipient_id' => $recipientId,
                     'status' => NotificationStatus::Pending,

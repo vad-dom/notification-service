@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\DTO\ProviderDeliveryStatusData;
 use App\Exceptions\UnexpectedNotificationStatusException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProviderDeliveryStatusRequest;
@@ -16,7 +17,9 @@ class ProviderEventController extends Controller
         ProviderEventService $service
     ): JsonResponse {
         try {
-            $notification = $service->updateDeliveryStatus($request->validated());
+            $notification = $service->updateDeliveryStatus(
+                ProviderDeliveryStatusData::fromArray($request->validated())
+            );
         } catch (UnexpectedNotificationStatusException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),

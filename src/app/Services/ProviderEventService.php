@@ -2,17 +2,17 @@
 
 namespace App\Services;
 
+use App\DTO\ProviderDeliveryStatusData;
 use App\Enums\NotificationStatus;
-use App\Enums\ProviderDeliveryStatus;
 use App\Exceptions\UnexpectedNotificationStatusException;
 use App\Models\Notification;
 
 class ProviderEventService
 {
-    public function updateDeliveryStatus(array $data): Notification
+    public function updateDeliveryStatus(ProviderDeliveryStatusData $data): Notification
     {
         $notification = Notification::query()
-            ->where('provider_message_id', $data['provider_message_id'])
+            ->where('provider_message_id', $data->providerMessageId)
             ->firstOrFail();
 
         if ($notification->status !== NotificationStatus::Sent) {
@@ -25,14 +25,14 @@ class ProviderEventService
             );
         }
 
-        $providerStatus = ProviderDeliveryStatus::from($data['status']);
+        $providerStatus = $data->status;
         $notificationStatus = $providerStatus->toNotificationStatus();
 
         $notification->update([
             'status' => $notificationStatus,
             'delivered_at' => $notificationStatus === NotificationStatus::Delivered ? now() : null,
             'failure_reason' => $notificationStatus === NotificationStatus::Discarded
-                ? $data['failure_reason'] ?? 'Provider rejected notification.'
+                ? $data->failureReason ?? 'Provider rejected notification.'
                 : null,
         ]);
 
