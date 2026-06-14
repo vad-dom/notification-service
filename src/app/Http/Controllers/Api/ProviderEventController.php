@@ -6,6 +6,7 @@ use App\DTO\ProviderDeliveryStatusData;
 use App\Exceptions\UnexpectedNotificationStatusException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProviderDeliveryStatusRequest;
+use App\Http\Resources\ProviderEventResource;
 use App\Services\ProviderEventService;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,7 +16,7 @@ class ProviderEventController extends Controller
     public function deliveryStatus(
         ProviderDeliveryStatusRequest $request,
         ProviderEventService $service
-    ): JsonResponse {
+    ): JsonResponse|ProviderEventResource {
         try {
             $notification = $service->updateDeliveryStatus(
                 ProviderDeliveryStatusData::fromArray($request->validated())
@@ -26,11 +27,6 @@ class ProviderEventController extends Controller
             ], Response::HTTP_CONFLICT);
         }
 
-        return response()->json([
-            'data' => [
-                'id' => $notification->id,
-                'status' => $notification->status,
-            ],
-        ]);
+        return new ProviderEventResource($notification);
     }
 }
