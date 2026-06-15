@@ -1,0 +1,368 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Notification Service API",
+        "description": "API микросервиса уведомлений",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8080/api",
+            "description": "Local API server"
+        }
+    ],
+    "paths": {
+        "/notification-batches": {
+            "post": {
+                "tags": [
+                    "Notification batches"
+                ],
+                "summary": "Create notification batch",
+                "operationId": "bad3183c00495507ce64286ab69f63ea",
+                "parameters": [
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "description": "Unique UUID key for idempotent request processing",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "channel",
+                                    "type",
+                                    "message",
+                                    "recipient_ids"
+                                ],
+                                "properties": {
+                                    "channel": {
+                                        "type": "string",
+                                        "example": "sms",
+                                        "enum": [
+                                            "sms",
+                                            "email"
+                                        ]
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "example": "transactional",
+                                        "enum": [
+                                            "transactional",
+                                            "marketing"
+                                        ]
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Your code: 1234"
+                                    },
+                                    "recipient_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            1,
+                                            2
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Batch created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationBatchResponse"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "Batch already exists for this Idempotency-Key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationBatchResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API token"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiToken": []
+                    }
+                ]
+            }
+        },
+        "/recipients/{recipient}/notifications": {
+            "get": {
+                "tags": [
+                    "Notification history"
+                ],
+                "summary": "Get recipient notification history",
+                "operationId": "f6ceaff639f2e8802d3d4770148d3825",
+                "parameters": [
+                    {
+                        "name": "recipient",
+                        "in": "path",
+                        "description": "Recipient ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Recipient notification history",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationHistoryResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid API token"
+                    },
+                    "404": {
+                        "description": "Recipient not found"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiToken": []
+                    }
+                ]
+            }
+        },
+        "/provider-events/delivery-status": {
+            "post": {
+                "tags": [
+                    "Provider events"
+                ],
+                "summary": "Handle provider delivery status event",
+                "operationId": "d2180a591aca11744b6dcc39cdcc96a7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "provider_message_id",
+                                    "status"
+                                ],
+                                "properties": {
+                                    "provider_message_id": {
+                                        "type": "string",
+                                        "example": "sms-1"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "example": "delivered",
+                                        "enum": [
+                                            "delivered",
+                                            "discarded"
+                                        ]
+                                    },
+                                    "failure_reason": {
+                                        "type": "string",
+                                        "example": "Invalid phone number",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Provider event accepted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProviderEventResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid provider token"
+                    },
+                    "404": {
+                        "description": "Notification not found"
+                    },
+                    "409": {
+                        "description": "Notification status cannot be changed"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "ProviderToken": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "NotificationBatchResponse": {
+                "properties": {
+                    "data": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "status": {
+                                "type": "string",
+                                "example": "accepted"
+                            },
+                            "notifications_count": {
+                                "type": "integer",
+                                "example": 2
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "NotificationHistoryResponse": {
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                },
+                                "channel": {
+                                    "type": "string",
+                                    "example": "sms"
+                                },
+                                "type": {
+                                    "type": "string",
+                                    "example": "transactional"
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "example": "Your code: 1234"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "example": "sent"
+                                },
+                                "provider_message_id": {
+                                    "type": "string",
+                                    "example": "sms-1",
+                                    "nullable": true
+                                },
+                                "failure_reason": {
+                                    "type": "string",
+                                    "example": null,
+                                    "nullable": true
+                                },
+                                "queued_at": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "nullable": true
+                                },
+                                "sent_at": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "nullable": true
+                                },
+                                "delivered_at": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "nullable": true
+                                },
+                                "created_at": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "ProviderEventResponse": {
+                "properties": {
+                    "data": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "status": {
+                                "type": "string",
+                                "example": "delivered"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "ApiToken": {
+                "type": "http",
+                "description": "Use token: test-token",
+                "bearerFormat": "Token",
+                "scheme": "bearer"
+            },
+            "ProviderToken": {
+                "type": "apiKey",
+                "description": "Use token: super-secret-token",
+                "name": "X-Provider-Token",
+                "in": "header"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Notification batches",
+            "description": "Notification batches"
+        },
+        {
+            "name": "Notification history",
+            "description": "Notification history"
+        },
+        {
+            "name": "Provider events",
+            "description": "Provider events"
+        }
+    ]
+}
