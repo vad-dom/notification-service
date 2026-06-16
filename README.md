@@ -58,6 +58,7 @@
       <li>запустятся worker'ы для очередей <code>notifications.critical</code> и <code>notifications.default</code>.</li>
     </ul>
   </li>
+  <br>
   <li>
     <strong>Открыть приложение:</strong>
     <pre><code>http://localhost:8080</code></pre>
