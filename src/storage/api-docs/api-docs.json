@@ -106,6 +106,9 @@
                     },
                     "422": {
                         "description": "Validation error"
+                    },
+                    "429": {
+                        "description": "Too many notification batch requests"
                     }
                 },
                 "security": [

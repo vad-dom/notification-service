@@ -5,12 +5,14 @@ use App\Http\Controllers\Api\NotificationHistoryController;
 use App\Http\Controllers\Api\ProviderEventController;
 use App\Http\Middleware\EnsureApiToken;
 use App\Http\Middleware\EnsureIdempotencyKey;
+use App\Http\Middleware\EnsureNotificationBatchRateLimit;
 use App\Http\Middleware\EnsureProviderToken;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/notification-batches', [NotificationController::class, 'store'])
     ->middleware([
         EnsureApiToken::class,
+        EnsureNotificationBatchRateLimit::class,
         EnsureIdempotencyKey::class,
     ]);
 

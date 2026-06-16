@@ -78,6 +78,10 @@ class NotificationController extends Controller
                 response: 422,
                 description: 'Validation error'
             ),
+            new OA\Response(
+                response: 429,
+                description: 'Too many notification batch requests'
+            ),
         ]
     )]
     public function store(

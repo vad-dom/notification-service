@@ -7,6 +7,7 @@ use App\Models\Notification;
 use App\Models\Recipient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
@@ -123,5 +124,38 @@ class NotificationBatchApiTest extends TestCase
         $response->assertJsonValidationErrors([
             'recipient_ids.0',
         ]);
+    }
+
+    public function test_store_is_rate_limited_by_api_token(): void
+    {
+        $key = 'notification-batches:create:api-token:'.sha1('test-token');
+
+        RateLimiter::clear($key);
+
+        $payload = [
+            'channel' => 'sms',
+            'type' => 'transactional',
+            'message' => 'Your code: 1234',
+            'recipient_ids' => [1],
+        ];
+
+        for ($i = 1; $i <= 10; $i++) {
+            $response = $this->withHeaders([
+                'Authorization' => 'Bearer test-token',
+                'Idempotency-Key' =>
+                    '550e8400-e29b-41d4-a716-4466554402'.str_pad(
+                        (string) $i, 2, '0', STR_PAD_LEFT
+                    ),
+            ])->postJson('/api/notification-batches', $payload);
+
+            $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer test-token',
+            'Idempotency-Key' => '550e8400-e29b-41d4-a716-446655440299',
+        ])->postJson('/api/notification-batches', $payload);
+
+        $response->assertStatus(Response::HTTP_TOO_MANY_REQUESTS);
     }
 }
