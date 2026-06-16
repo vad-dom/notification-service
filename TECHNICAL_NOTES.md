@@ -133,19 +133,41 @@ Idempotency-Key
 
 Ключ хранится в PostgreSQL в таблице `notification_batches`.
 
-Повторный запрос с тем же ключом возвращает уже созданный batch и HTTP `200 OK`, а не создаёт новые уведомления.
+Повторный запрос с тем же ключом возвращает уже созданный batch и HTTP `200 OK`, а не создает новые уведомления.
 
 Первичный запрос возвращает `201 Created`.
 
-### Redis Lock
+### Redis: locks и rate limits
 
-Redis используется для lock'а при обработке job:
+Redis используется для быстрых временных ограничений и блокировок.
+
+#### Lock при обработке job
+
+При обработке `SendNotificationJob` используется Redis lock:
 
 ```text
 notification:{id}
 ```
 
 Это защищает от ситуации, когда одно и то же уведомление одновременно обрабатывается несколькими worker'ами.
+
+#### Контроль лимитов по API token
+
+Для endpoint'а:
+
+```http
+POST /api/notification-batches
+```
+
+Если один вызывающий сервис начнет отправлять слишком много batch-запросов, он будет временно ограничен. 
+
+При этом другие клиенты API смогут продолжить работу.
+
+Счетчики rate limit хранятся через Laravel RateLimiter в cache store. 
+
+Так как cache store настроен на Redis, эти счетчики хранятся в Redis.
+
+В качестве расширения было бы полезно добавить контроль лимитов по провайдеру, получателю, типу уведомления. 
 
 ### At-least-once и exactly-once
 
@@ -228,17 +250,7 @@ Repository слой намеренно не добавлен.
 
 ### Тесты
 
-Добавлены feature/integration tests для основных сценариев:
-
-* создание batch;
-* защита API token;
-* проверка Idempotency-Key;
-* история уведомлений получателя;
-* provider event `sent → delivered`;
-* provider event `sent → discarded`;
-* повторный provider event → `409 Conflict`;
-* публикация job в очередь;
-* обработка job и переход `queued → sent`.
+Добавлены feature/integration tests для основных сценариев.
 
 Тесты используют SQLite in-memory, заданный в `phpunit.xml`.
 
