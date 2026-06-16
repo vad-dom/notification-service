@@ -1,5 +1,5 @@
 <h1>Notification Service</h1>
-<p>Микросервис уведомлений: массовая рассылка SMS/Email уведомлений.</p>
+<p>Микросервис уведомлений: массовая рассылка SMS/Email.</p>
 
 <p>Используемые технологии и технические решения: <a href="TECHNICAL_NOTES.md">TECHNICAL_NOTES.md</a></p>
 
@@ -123,7 +123,7 @@
 
 <pre><code>docker compose exec php php artisan test --filter NotificationBatchApiTest</code></pre>
 
-<h3>Важно</h3>
+<h3>⚠️ Важно</h3>
 <p>Автоматические тесты используют SQLite in-memory базу, заданную в <code>phpunit.xml</code>. Основная PostgreSQL база при запуске тестов не очищается.</p>
 
 <br>
