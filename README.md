@@ -1,6 +1,8 @@
 <h1>Notification Service</h1>
 <p>Микросервис уведомлений: массовая рассылка SMS/Email.</p>
 
+<p>Текст задания: <a href="TASK.md">TASK.md</a></p>
+
 <p>Используемые технологии и технические решения: <a href="TECHNICAL_NOTES.md">TECHNICAL_NOTES.md</a></p>
 
 <br>
@@ -76,8 +78,8 @@
 <p>Для проверки endpoint'ов в Swagger нажмите <strong>Authorize</strong> и укажите токены:</p>
 
 <ul>
-  <li><code>ApiToken</code>: <code>test-token</code></li>
-  <li><code>ProviderToken</code>: <code>super-secret-token</code></li>
+  <li>ApiToken: <code>test-token</code></li>
+  <li>ProviderToken: <code>super-secret-token</code></li>
 </ul>
 
 <br>
@@ -87,7 +89,10 @@
 
 <pre><code>http://localhost:15672</code></pre>
 
-<p>Логин и пароль берутся из <code>docker-compose.yml</code>.</p>
+<ul>
+  <li>Логин: <code>notification_user</code></li>
+  <li>Пароль: <code>notification_password</code></li>
+</ul>
 
 <br>
 <h2>📋 Тестовые получатели</h2>
@@ -109,7 +114,7 @@
 <pre><code>Authorization: Bearer test-token</code></pre>
 
 <h3>Provider event endpoint</h3>
-<p>Для callback/event от провайдера используется отдельный заголовок:</p>
+<p>Для подтверждения доставки сообщения от провайдера используется отдельный заголовок:</p>
 
 <pre><code>X-Provider-Token: super-secret-token</code></pre>
 
