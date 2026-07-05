@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class SendNotificationJob implements ShouldQueue
 {
@@ -59,5 +60,29 @@ class SendNotificationJob implements ShouldQueue
         } finally {
             $lock->release();
         }
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        $notification = Notification::find($this->notificationId);
+
+        if (! $notification) {
+            Log::error('Notification job failed, notification was not found', [
+                'notification_id' => $this->notificationId,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return;
+        }
+
+        $notification->update([
+            'status' => NotificationStatus::Discarded,
+            'failure_reason' => $exception->getMessage(),
+        ]);
+
+        Log::error('Notification job failed', [
+            'notification_id' => $notification->id,
+            'error' => $exception->getMessage(),
+        ]);
     }
 }
