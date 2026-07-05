@@ -12,6 +12,7 @@ class NotificationPublisher
         $notification->loadMissing('batch');
 
         SendNotificationJob::dispatch($notification->id)
-            ->onQueue($notification->batch->type->queueName());
+            ->onQueue($notification->batch->type->queueName())
+            ->afterCommit();
     }
 }
