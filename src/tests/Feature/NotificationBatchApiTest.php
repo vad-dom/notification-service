@@ -142,10 +142,9 @@ class NotificationBatchApiTest extends TestCase
         for ($i = 1; $i <= 10; $i++) {
             $response = $this->withHeaders([
                 'Authorization' => 'Bearer test-token',
-                'Idempotency-Key' =>
-                    '550e8400-e29b-41d4-a716-4466554402'.str_pad(
-                        (string) $i, 2, '0', STR_PAD_LEFT
-                    ),
+                'Idempotency-Key' => '550e8400-e29b-41d4-a716-4466554402'.str_pad(
+                    (string) $i, 2, '0', STR_PAD_LEFT
+                ),
             ])->postJson('/api/notification-batches', $payload);
 
             $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
