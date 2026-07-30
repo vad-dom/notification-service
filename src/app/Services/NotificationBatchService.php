@@ -5,59 +5,99 @@ namespace App\Services;
 use App\DTO\CreateNotificationBatchData;
 use App\DTO\NotificationBatchCreationResult;
 use App\Enums\NotificationStatus;
+use App\Exceptions\IdempotencyLockTimeoutException;
 use App\Models\NotificationBatch;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 readonly class NotificationBatchService
 {
+    private const int LOCK_TTL_SECONDS = 30;
+
+    private const int LOCK_WAIT_SECONDS = 10;
+
     public function __construct(
         private NotificationPublisher $publisher
     ) {}
 
     public function create(CreateNotificationBatchData $data, string $idempotencyKey): NotificationBatchCreationResult
     {
-        return DB::transaction(function () use ($data, $idempotencyKey) {
-            $existingBatch = NotificationBatch::query()
-                ->where('idempotency_key', $idempotencyKey)
-                ->first();
+        $existingBatch = $this->existingBatchResult($idempotencyKey);
 
-            if ($existingBatch) {
-                return new NotificationBatchCreationResult(
-                    batch: $existingBatch->loadCount('notifications'),
-                    created: false,
-                );
-            }
+        if ($existingBatch) {
+            return $existingBatch;
+        }
 
-            $type = $data->type;
+        $lockKey = 'notification-batch:idempotency:'.hash('sha256', $idempotencyKey);
 
-            $batch = NotificationBatch::query()->create([
-                'channel' => $data->channel,
-                'type' => $type,
-                'message' => $data->message,
-                'idempotency_key' => $idempotencyKey,
-            ]);
+        $lock = Cache::lock($lockKey, self::LOCK_TTL_SECONDS);
 
-            $priority = $type->priority();
+        try {
+            return $lock->block(self::LOCK_WAIT_SECONDS, function () use ($data, $idempotencyKey) {
+                $existingBatch = $this->existingBatchResult($idempotencyKey);
 
-            foreach ($data->recipientIds as $recipientId) {
-                $notification = $batch->notifications()->create([
-                    'recipient_id' => $recipientId,
-                    'status' => NotificationStatus::Pending,
-                    'priority' => $priority,
-                ]);
+                if ($existingBatch) {
+                    return $existingBatch;
+                }
 
-                $this->publisher->publish($notification);
+                return DB::transaction(function () use ($data, $idempotencyKey) {
+                    $type = $data->type;
 
-                $notification->update([
-                    'status' => NotificationStatus::Queued,
-                    'queued_at' => now(),
-                ]);
-            }
+                    $batch = NotificationBatch::query()->create([
+                        'channel' => $data->channel,
+                        'type' => $type,
+                        'message' => $data->message,
+                        'idempotency_key' => $idempotencyKey,
+                    ]);
 
-            return new NotificationBatchCreationResult(
-                batch: $batch->loadCount('notifications'),
-                created: true,
-            );
-        });
+                    $priority = $type->priority();
+
+                    foreach ($data->recipientIds as $recipientId) {
+                        $notification = $batch->notifications()->create([
+                            'recipient_id' => $recipientId,
+                            'status' => NotificationStatus::Pending,
+                            'priority' => $priority,
+                        ]);
+
+                        $this->publisher->publish($notification);
+
+                        $notification->update([
+                            'status' => NotificationStatus::Queued,
+                            'queued_at' => now(),
+                        ]);
+                    }
+
+                    return new NotificationBatchCreationResult(
+                        batch: $batch->loadCount('notifications'),
+                        created: true,
+                    );
+                });
+            });
+        } catch (LockTimeoutException $exception) {
+            throw new IdempotencyLockTimeoutException(previous: $exception);
+        }
+    }
+
+    private function findExistingBatch(string $idempotencyKey): ?NotificationBatch
+    {
+        return NotificationBatch::query()
+            ->where('idempotency_key', $idempotencyKey)
+            ->withCount('notifications')
+            ->first();
+    }
+
+    private function existingBatchResult(string $idempotencyKey): ?NotificationBatchCreationResult
+    {
+        $batch = $this->findExistingBatch($idempotencyKey);
+
+        if (! $batch) {
+            return null;
+        }
+
+        return new NotificationBatchCreationResult(
+            batch: $batch,
+            created: false,
+        );
     }
 }
