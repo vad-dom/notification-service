@@ -3,8 +3,13 @@
 namespace Tests\Feature;
 
 use App\Enums\NotificationStatus;
+use App\Jobs\PublishNotificationOutboxJob;
+use App\Jobs\SendNotificationJob;
 use App\Models\Notification;
+use App\Models\NotificationBatch;
+use App\Models\NotificationOutbox;
 use App\Models\Recipient;
+use App\Services\NotificationOutboxService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
@@ -65,6 +70,19 @@ class NotificationBatchApiTest extends TestCase
 
         $this->assertDatabaseCount('notification_batches', 1);
         $this->assertDatabaseCount('notifications', 2);
+        $this->assertDatabaseCount('notification_outbox', 2);
+
+        Notification::query()
+            ->get()
+            ->each(function (Notification $notification): void {
+                $this->assertSame(NotificationStatus::Pending, $notification->status);
+                $this->assertNull($notification->queued_at);
+            });
+
+        Queue::assertPushed(PublishNotificationOutboxJob::class, 1);
+
+        $batch = NotificationBatch::query()->firstOrFail();
+        app(NotificationOutboxService::class)->publishPendingForBatch($batch->id);
 
         Notification::query()
             ->get()
@@ -72,6 +90,12 @@ class NotificationBatchApiTest extends TestCase
                 $this->assertSame(NotificationStatus::Queued, $notification->status);
                 $this->assertNotNull($notification->queued_at);
             });
+
+        NotificationOutbox::query()
+            ->get()
+            ->each(fn (NotificationOutbox $entry) => $this->assertNotNull($entry->published_at));
+
+        Queue::assertPushed(SendNotificationJob::class, 2);
     }
 
     public function test_store_is_idempotent(): void
@@ -105,6 +129,9 @@ class NotificationBatchApiTest extends TestCase
 
         $this->assertDatabaseCount('notification_batches', 1);
         $this->assertDatabaseCount('notifications', 2);
+        $this->assertDatabaseCount('notification_outbox', 2);
+
+        Queue::assertPushed(PublishNotificationOutboxJob::class, 2);
     }
 
     public function test_store_validates_recipients_exist(): void

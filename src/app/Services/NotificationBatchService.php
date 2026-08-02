@@ -6,6 +6,7 @@ use App\DTO\CreateNotificationBatchData;
 use App\DTO\NotificationBatchCreationResult;
 use App\Enums\NotificationStatus;
 use App\Exceptions\IdempotencyLockTimeoutException;
+use App\Jobs\PublishNotificationOutboxJob;
 use App\Models\NotificationBatch;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
@@ -18,7 +19,7 @@ readonly class NotificationBatchService
     private const int LOCK_WAIT_SECONDS = 10;
 
     public function __construct(
-        private NotificationPublisher $publisher
+        private NotificationOutboxService $outboxService
     ) {}
 
     public function create(CreateNotificationBatchData $data, string $idempotencyKey): NotificationBatchCreationResult
@@ -41,7 +42,7 @@ readonly class NotificationBatchService
                     return $existingBatch;
                 }
 
-                return DB::transaction(function () use ($data, $idempotencyKey) {
+                $result = DB::transaction(function () use ($data, $idempotencyKey) {
                     $type = $data->type;
 
                     $batch = NotificationBatch::query()->create([
@@ -52,6 +53,7 @@ readonly class NotificationBatchService
                     ]);
 
                     $priority = $type->priority();
+                    $queueName = $type->queueName();
 
                     foreach ($data->recipientIds as $recipientId) {
                         $notification = $batch->notifications()->create([
@@ -60,12 +62,7 @@ readonly class NotificationBatchService
                             'priority' => $priority,
                         ]);
 
-                        $this->publisher->publish($notification);
-
-                        $notification->update([
-                            'status' => NotificationStatus::Queued,
-                            'queued_at' => now(),
-                        ]);
+                        $this->outboxService->record($notification, $queueName);
                     }
 
                     return new NotificationBatchCreationResult(
@@ -73,6 +70,10 @@ readonly class NotificationBatchService
                         created: true,
                     );
                 });
+
+                $this->scheduleOutboxRelay($result->batch->id);
+
+                return $result;
             });
         } catch (LockTimeoutException $exception) {
             throw new IdempotencyLockTimeoutException(previous: $exception);
@@ -95,9 +96,16 @@ readonly class NotificationBatchService
             return null;
         }
 
+        $this->scheduleOutboxRelay($batch->id);
+
         return new NotificationBatchCreationResult(
             batch: $batch,
             created: false,
         );
+    }
+
+    private function scheduleOutboxRelay(int $batchId): void
+    {
+        PublishNotificationOutboxJob::dispatch($batchId)->afterCommit();
     }
 }

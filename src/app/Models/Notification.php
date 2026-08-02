@@ -7,6 +7,7 @@ use App\Enums\NotificationStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Notification extends Model
 {
@@ -43,5 +44,10 @@ class Notification extends Model
     public function recipient(): BelongsTo
     {
         return $this->belongsTo(Recipient::class);
+    }
+
+    public function outbox(): HasOne
+    {
+        return $this->hasOne(NotificationOutbox::class);
     }
 }
