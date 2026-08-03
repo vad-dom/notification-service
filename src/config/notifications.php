@@ -9,4 +9,7 @@ return [
         'relay_queue' => env('NOTIFICATION_OUTBOX_RELAY_QUEUE', 'notifications.outbox'),
         'publish_limit' => env('NOTIFICATION_OUTBOX_PUBLISH_LIMIT', 100),
     ],
+
+    // Set to 15-30 for manual outbox testing; keep 0 in production.
+    'manual_test_delay_seconds' => env('NOTIFICATION_MANUAL_TEST_DELAY_SECONDS', 0),
 ];

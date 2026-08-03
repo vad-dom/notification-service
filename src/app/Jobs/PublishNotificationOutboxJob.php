@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Services\NotificationOutboxService;
+use App\Support\ManualTestDelay;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -19,6 +20,8 @@ class PublishNotificationOutboxJob implements ShouldQueue
 
     public function handle(NotificationOutboxService $outboxService): void
     {
+        ManualTestDelay::apply('outbox_relay');
+
         $outboxService->publishPendingForBatch($this->batchId);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\NotificationStatus;
 use App\Models\Notification;
 use App\Services\NotificationProviderResolver;
+use App\Support\ManualTestDelay;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
@@ -42,6 +43,8 @@ class SendNotificationJob implements ShouldQueue
             if ($notification->status !== NotificationStatus::Queued) {
                 return;
             }
+
+            ManualTestDelay::apply('send_notification');
 
             $provider = $resolver->resolve($notification);
 
