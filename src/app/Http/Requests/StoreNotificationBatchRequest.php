@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\NotificationChannel;
 use App\Enums\NotificationType;
+use App\Http\RateLimiting\NotificationBatchRateLimiter;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
@@ -32,5 +33,10 @@ class StoreNotificationBatchRequest extends FormRequest
             'recipient_ids' => ['required', 'array', 'min:1'],
             'recipient_ids.*' => ['required', 'integer', 'exists:recipients,id'],
         ];
+    }
+
+    protected function passedValidation(): void
+    {
+        app(NotificationBatchRateLimiter::class)->enforce($this);
     }
 }

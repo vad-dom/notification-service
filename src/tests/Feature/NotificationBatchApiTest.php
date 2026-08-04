@@ -155,15 +155,19 @@ class NotificationBatchApiTest extends TestCase
 
     public function test_store_is_rate_limited_by_api_token(): void
     {
+        Queue::fake();
+
         $key = 'notification-batches:create:api-token:'.sha1('test-token');
 
         RateLimiter::clear($key);
+
+        $recipient = Recipient::factory()->create();
 
         $payload = [
             'channel' => 'sms',
             'type' => 'transactional',
             'message' => 'Your code: 1234',
-            'recipient_ids' => [1],
+            'recipient_ids' => [$recipient->id],
         ];
 
         for ($i = 1; $i <= 10; $i++) {
@@ -174,7 +178,7 @@ class NotificationBatchApiTest extends TestCase
                 ),
             ])->postJson('/api/notification-batches', $payload);
 
-            $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+            $response->assertStatus(Response::HTTP_CREATED);
         }
 
         $response = $this->withHeaders([
@@ -182,6 +186,46 @@ class NotificationBatchApiTest extends TestCase
             'Idempotency-Key' => '550e8400-e29b-41d4-a716-446655440299',
         ])->postJson('/api/notification-batches', $payload);
 
-        $response->assertStatus(Response::HTTP_TOO_MANY_REQUESTS);
+        $response->assertStatus(Response::HTTP_TOO_MANY_REQUESTS)
+            ->assertHeader('Retry-After');
+    }
+
+    public function test_store_does_not_rate_limit_invalid_requests(): void
+    {
+        Queue::fake();
+
+        $key = 'notification-batches:create:api-token:'.sha1('test-token');
+
+        RateLimiter::clear($key);
+
+        for ($i = 1; $i <= 15; $i++) {
+            $response = $this->withHeaders([
+                'Authorization' => 'Bearer test-token',
+                'Idempotency-Key' => '550e8400-e29b-41d4-a716-4466554403'.str_pad(
+                    (string) $i, 2, '0', STR_PAD_LEFT
+                ),
+            ])->postJson('/api/notification-batches', [
+                'channel' => 'sms',
+                'type' => 'transactional',
+                'message' => 'Your code: 1234',
+                'recipient_ids' => [999999],
+            ]);
+
+            $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $recipient = Recipient::factory()->create();
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer test-token',
+            'Idempotency-Key' => '550e8400-e29b-41d4-a716-446655440399',
+        ])->postJson('/api/notification-batches', [
+            'channel' => 'sms',
+            'type' => 'transactional',
+            'message' => 'Your code: 1234',
+            'recipient_ids' => [$recipient->id],
+        ]);
+
+        $response->assertStatus(Response::HTTP_CREATED);
     }
 }
