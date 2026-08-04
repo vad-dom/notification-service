@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('status');
             $table->unsignedTinyInteger('priority');
 
-            $table->string('provider_message_id')->nullable();
+            $table->string('provider_message_id')->unique()->nullable();
             $table->text('failure_reason')->nullable();
 
             $table->timestamp('queued_at')->nullable();
