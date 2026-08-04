@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\NotificationHistoryResource;
 use App\Models\Recipient;
+use App\Services\NotificationHistoryService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use OpenApi\Attributes as OA;
 
@@ -24,6 +25,13 @@ class NotificationHistoryController extends Controller
                 schema: new OA\Schema(type: 'integer'),
                 example: 1
             ),
+            new OA\Parameter(
+                name: 'cursor',
+                description: 'Cursor for the next page of results',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string'),
+            ),
         ],
         responses: [
             new OA\Response(
@@ -41,13 +49,12 @@ class NotificationHistoryController extends Controller
             ),
         ]
     )]
-    public function index(Recipient $recipient): AnonymousResourceCollection
-    {
-        $notifications = $recipient->notifications()
-            ->with('batch')
-            ->latest()
-            ->get();
-
-        return NotificationHistoryResource::collection($notifications);
+    public function index(
+        Recipient $recipient,
+        NotificationHistoryService $service
+    ): AnonymousResourceCollection {
+        return NotificationHistoryResource::collection(
+            $service->paginateForRecipient($recipient)
+        );
     }
 }
