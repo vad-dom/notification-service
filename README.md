@@ -8,27 +8,34 @@
 <br>
 <h2>📂 Структура проекта</h2>
 <pre>
-├── docker/                                      # настройки Docker
+├── docker/                                      # настройки Docker (PHP, Nginx, init-скрипты)
 ├── src/
 │   ├── app/
-│   │   ├── DTO/                                # DTO для входных данных и результата создания batch
+│   │   ├── Console/Commands/                   # artisan-команды (recovery outbox)
+│   │   ├── DTO/                                # DTO для входных данных и результатов сервисов
 │   │   ├── Enums/                              # статусы, каналы, типы и приоритеты уведомлений
-│   │   ├── Exceptions/                         # доменные исключения
+│   │   ├── Exceptions/                         # доменные и HTTP-aware исключения
 │   │   ├── Http/
 │   │   │   ├── Controllers/Api/                # API-контроллеры
 │   │   │   ├── Middleware/                     # API token, provider token, Idempotency-Key
+│   │   │   ├── RateLimiting/                   # rate limit для создания batch
 │   │   │   ├── Requests/                       # валидация API-запросов
 │   │   │   └── Resources/                      # форматирование API-ответов
 │   │   ├── Interfaces/                         # интерфейс провайдера уведомлений
-│   │   ├── Jobs/                               # SendNotificationJob
-│   │   ├── Models/                             # Recipient, NotificationBatch, Notification
+│   │   ├── Jobs/                               # PublishNotificationOutboxJob, SendNotificationJob
+│   │   ├── Models/                             # Recipient, NotificationBatch, Notification, NotificationOutbox
 │   │   ├── OpenApi/                            # OpenAPI/Swagger описание
-│   │   └── Services/                           # бизнес-логика, publisher, resolver, mock-провайдеры
+│   │   ├── Services/
+│   │   │   ├── NotificationProviders/          # mock-провайдеры SMS/Email
+│   │   │   └── ...                             # batch, outbox, publisher, history, provider events
+│   │   └── Support/                            # вспомогательные утилиты (manual test delay)
+│   ├── config/
+│   │   └── notifications.php                   # rate limit, outbox, manual test delay
 │   ├── database/
 │   │   ├── factories/                          # factories для тестов
-│   │   ├── migrations/                         # таблицы recipients, batches, notifications
+│   │   ├── migrations/                         # recipients, batches, notifications, outbox, jobs
 │   │   └── seeders/                            # RecipientSeeder
-│   ├── routes/                                 # api.php, web.php
+│   ├── routes/                                 # api.php, web.php, console.php (scheduler)
 │   ├── storage/api-docs/                       # сгенерированный api-docs.json для Swagger
 │   └── tests/Feature/                          # feature/integration tests
 ├── README.md
@@ -57,7 +64,7 @@
       <li>создастся <code>.env</code> из <code>.env.example</code>, если его ещё нет;</li>
       <li>выполнятся миграции;</li>
       <li>создадутся тестовые получатели через <code>RecipientSeeder</code>;</li>
-      <li>запустятся worker'ы для очередей <code>notifications.critical</code> и <code>notifications.default</code>.</li>
+      <li>запустятся worker'ы для очередей <code>notifications.outbox</code>, <code>notifications.critical</code> и <code>notifications.default</code>, а также scheduler для recovery outbox.</li>
     </ul>
   </li>
   <br>
@@ -128,6 +135,10 @@
 <p>Или для запуска конкретного теста:</p>
 
 <pre><code>docker compose exec php php artisan test --filter NotificationBatchApiTest</code></pre>
+
+<p>End-to-end сценарий (API → очередь → провайдер → webhook):</p>
+
+<pre><code>docker compose exec php php artisan test --filter NotificationDeliveryIntegrationTest</code></pre>
 
 <h3>⚠️ Важно</h3>
 <p>Автоматические тесты используют SQLite in-memory базу, заданную в <code>phpunit.xml</code>. Основная PostgreSQL база при запуске тестов не очищается.</p>
