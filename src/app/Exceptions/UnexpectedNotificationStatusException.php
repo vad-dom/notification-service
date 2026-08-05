@@ -2,17 +2,12 @@
 
 namespace App\Exceptions;
 
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
-class UnexpectedNotificationStatusException extends RuntimeException
+class UnexpectedNotificationStatusException extends HttpDomainException
 {
-    public function render(Request $request): JsonResponse
+    public function statusCode(): int
     {
-        return response()->json([
-            'message' => $this->getMessage(),
-        ], Response::HTTP_CONFLICT);
+        return Response::HTTP_CONFLICT;
     }
 }
