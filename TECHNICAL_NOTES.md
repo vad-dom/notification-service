@@ -21,6 +21,7 @@
 * `recipients` — получатели уведомлений
 * `notification_batches` — пачки массовой рассылки
 * `notifications` — отдельные уведомления конкретным получателям
+* `notification_outbox` — outbox-записи для надежной публикации в очередь
 
 ## Ключевые решения
 
@@ -56,7 +57,7 @@ RabbitMQ используется для асинхронной обработк
 
 Статус `pending` добавлен дополнительно, чтобы не считать уведомление поставленным в очередь до успешной публикации job.
 
-Как расширение для статуса `pending` можно реализовать recovery-механизм, для тестового задания это избыточно.
+Recovery для таких записей реализован через transactional outbox: неопубликованные outbox-записи повторно обрабатываются `PublishNotificationOutboxJob`, scheduler-ом и artisan-командой `notifications:publish-outbox`.
 
 ### Provider Event endpoint
 
@@ -86,12 +87,13 @@ POST /api/provider-events/delivery-status
 
 Такой подход позволяет легко заменить mock на реальную интеграцию.
 
-### Две очереди: critical и default
+### Очереди RabbitMQ
 
-Используются две очереди:
+Используются очереди:
 
-* `notifications.critical`
-* `notifications.default`
+* `notifications.outbox` — relay outbox-записей в рабочие очереди;
+* `notifications.critical` — транзакционные уведомления;
+* `notifications.default` — маркетинговые уведомления.
 
 Транзакционные уведомления отправляются в critical queue.
 
