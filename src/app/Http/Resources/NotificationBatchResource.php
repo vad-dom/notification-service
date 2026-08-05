@@ -17,8 +17,7 @@ class NotificationBatchResource extends JsonResource
         return [
             'id' => $this->id,
             'status' => 'accepted',
-            'notifications_count' => $this->notifications_count
-                ?? $this->notifications()->count(),
+            'notifications_count' => $this->notifications_count,
         ];
     }
 }
