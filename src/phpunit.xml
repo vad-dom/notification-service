@@ -32,5 +32,7 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="API_TOKEN" value="test-token"/>
+        <env name="PROVIDER_EVENT_TOKEN" value="super-secret-token"/>
     </php>
 </phpunit>
