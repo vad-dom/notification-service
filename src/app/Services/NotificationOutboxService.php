@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\NotificationStatus;
 use App\Models\Notification;
 use App\Models\NotificationOutbox;
+use Illuminate\Database\Eloquent\Builder;
 
 class NotificationOutboxService
 {
@@ -17,26 +18,21 @@ class NotificationOutboxService
         return NotificationOutbox::query()->create([
             'notification_id' => $notification->id,
             'queue_name' => $queueName,
+            'priority' => $notification->priority,
         ]);
     }
 
     public function publishPendingForBatch(int $batchId): void
     {
-        NotificationOutbox::query()
-            ->whereNull('published_at')
+        $this->pendingOutboxQuery()
             ->whereHas('notification', fn ($query) => $query->where('notification_batch_id', $batchId))
-            ->with('notification')
-            ->orderBy('id')
             ->get()
             ->each(fn (NotificationOutbox $entry) => $this->publishEntry($entry));
     }
 
     public function publishPending(int $limit = 100): int
     {
-        $entries = NotificationOutbox::query()
-            ->whereNull('published_at')
-            ->with('notification')
-            ->orderBy('id')
+        $entries = $this->pendingOutboxQuery()
             ->limit($limit)
             ->get();
 
@@ -69,5 +65,14 @@ class NotificationOutboxService
         ]);
 
         $entry->update(['published_at' => now()]);
+    }
+
+    private function pendingOutboxQuery(): Builder
+    {
+        return NotificationOutbox::query()
+            ->whereNull('published_at')
+            ->with('notification')
+            ->orderByDesc('priority')
+            ->orderBy('id');
     }
 }

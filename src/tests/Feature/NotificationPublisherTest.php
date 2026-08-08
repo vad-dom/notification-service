@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\NotificationPriority;
 use App\Enums\NotificationStatus;
 use App\Enums\NotificationType;
 use App\Jobs\SendNotificationJob;
@@ -58,5 +59,21 @@ class NotificationPublisherTest extends TestCase
         app(NotificationPublisher::class)->publish($notification);
 
         Queue::assertPushedOn('notifications.default', SendNotificationJob::class);
+    }
+
+    public function test_publisher_dispatches_job_with_notification_priority(): void
+    {
+        Queue::fake();
+
+        $notification = Notification::factory()->create([
+            'status' => NotificationStatus::Pending,
+            'priority' => NotificationPriority::Urgent,
+        ]);
+
+        app(NotificationPublisher::class)->publish($notification);
+
+        Queue::assertPushed(SendNotificationJob::class, function (SendNotificationJob $job): bool {
+            return $job->priority === NotificationPriority::Urgent->value;
+        });
     }
 }

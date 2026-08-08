@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\NotificationPriority;
 use App\Enums\NotificationStatus;
 use App\Jobs\SendNotificationJob;
 use App\Models\Notification;
@@ -89,5 +90,48 @@ class NotificationOutboxServiceTest extends TestCase
 
         $this->assertSame(2, $publishedCount);
         Queue::assertPushed(SendNotificationJob::class, 2);
+    }
+
+    public function test_publish_pending_processes_urgent_entries_first(): void
+    {
+        Queue::fake();
+
+        $normalNotification = Notification::factory()->create([
+            'status' => NotificationStatus::Pending,
+            'priority' => NotificationPriority::Normal,
+            'queued_at' => null,
+        ]);
+
+        $urgentNotification = Notification::factory()->create([
+            'status' => NotificationStatus::Pending,
+            'priority' => NotificationPriority::Urgent,
+            'queued_at' => null,
+        ]);
+
+        NotificationOutbox::factory()->create([
+            'notification_id' => $normalNotification->id,
+            'priority' => NotificationPriority::Normal,
+            'published_at' => null,
+        ]);
+
+        NotificationOutbox::factory()->create([
+            'notification_id' => $urgentNotification->id,
+            'priority' => NotificationPriority::Urgent,
+            'published_at' => null,
+        ]);
+
+        app(NotificationOutboxService::class)->publishPending(1);
+
+        Queue::assertPushed(SendNotificationJob::class, function (SendNotificationJob $job) use ($urgentNotification): bool {
+            return $job->notificationId === $urgentNotification->id;
+        });
+
+        Queue::assertPushed(SendNotificationJob::class, 1);
+
+        $normalNotification->refresh();
+        $urgentNotification->refresh();
+
+        $this->assertSame(NotificationStatus::Pending, $normalNotification->status);
+        $this->assertSame(NotificationStatus::Queued, $urgentNotification->status);
     }
 }

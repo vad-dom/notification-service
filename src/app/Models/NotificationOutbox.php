@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\NotificationPriority;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,12 +16,14 @@ class NotificationOutbox extends Model
     protected $fillable = [
         'notification_id',
         'queue_name',
+        'priority',
         'published_at',
     ];
 
     protected function casts(): array
     {
         return [
+            'priority' => NotificationPriority::class,
             'published_at' => 'datetime',
         ];
     }

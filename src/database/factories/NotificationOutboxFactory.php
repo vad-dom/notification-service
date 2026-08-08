@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\NotificationPriority;
 use App\Models\Notification;
 use App\Models\NotificationOutbox;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -23,6 +24,7 @@ class NotificationOutboxFactory extends Factory
         return [
             'notification_id' => Notification::factory(),
             'queue_name' => 'notifications.critical',
+            'priority' => NotificationPriority::Urgent,
             'published_at' => null,
         ];
     }

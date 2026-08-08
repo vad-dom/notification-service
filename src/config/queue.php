@@ -64,7 +64,8 @@ return [
             'options' => [
                 'queue' => [
                     'job' => RabbitMQJob::class,
-                    'prioritize_delayed' => false,
+                    // Enables x-max-priority on classic queues; job priority overrides worker retry attempt count.
+                    'prioritize_delayed' => true,
                     'queue_max_priority' => 10,
                 ],
             ],

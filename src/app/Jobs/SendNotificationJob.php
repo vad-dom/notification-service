@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\NotificationPriority;
 use App\Enums\NotificationStatus;
 use App\Models\Notification;
 use App\Services\NotificationProviderResolver;
@@ -19,10 +20,10 @@ class SendNotificationJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public int $notificationId)
-    {
-        //
-    }
+    public function __construct(
+        public int $notificationId,
+        public int $priority = NotificationPriority::Normal->value,
+    ) {}
 
     /**
      * Execute the job.
