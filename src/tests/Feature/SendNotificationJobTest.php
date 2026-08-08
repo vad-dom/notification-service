@@ -7,6 +7,7 @@ use App\Jobs\SendNotificationJob;
 use App\Models\Notification;
 use App\Services\NotificationProviderResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class SendNotificationJobTest extends TestCase
@@ -49,5 +50,32 @@ class SendNotificationJobTest extends TestCase
 
         $this->assertSame(NotificationStatus::Sent, $notification->status);
         $this->assertSame('sms-existing', $notification->provider_message_id);
+    }
+
+    public function test_job_skips_processing_when_lock_is_already_held(): void
+    {
+        $notification = Notification::factory()->create([
+            'status' => NotificationStatus::Queued,
+            'provider_message_id' => null,
+            'sent_at' => null,
+        ]);
+
+        $lock = Cache::lock("notification:{$notification->id}", 30);
+
+        $this->assertTrue($lock->get());
+
+        try {
+            (new SendNotificationJob($notification->id))->handle(
+                app(NotificationProviderResolver::class)
+            );
+
+            $notification->refresh();
+
+            $this->assertSame(NotificationStatus::Queued, $notification->status);
+            $this->assertNull($notification->provider_message_id);
+            $this->assertNull($notification->sent_at);
+        } finally {
+            $lock->release();
+        }
     }
 }

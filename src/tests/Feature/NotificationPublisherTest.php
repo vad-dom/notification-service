@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\NotificationStatus;
+use App\Enums\NotificationType;
 use App\Jobs\SendNotificationJob;
 use App\Models\Notification;
+use App\Models\NotificationBatch;
 use App\Services\NotificationPublisher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -40,5 +42,21 @@ class NotificationPublisherTest extends TestCase
         app(NotificationPublisher::class)->publish($notification);
 
         Queue::assertPushedOn('notifications.critical', SendNotificationJob::class);
+    }
+
+    public function test_publisher_uses_default_queue_for_marketing_notifications(): void
+    {
+        Queue::fake();
+
+        $notification = Notification::factory()->create([
+            'status' => NotificationStatus::Pending,
+            'notification_batch_id' => NotificationBatch::factory()->create([
+                'type' => NotificationType::Marketing,
+            ]),
+        ]);
+
+        app(NotificationPublisher::class)->publish($notification);
+
+        Queue::assertPushedOn('notifications.default', SendNotificationJob::class);
     }
 }
