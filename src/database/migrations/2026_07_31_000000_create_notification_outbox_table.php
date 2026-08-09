@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -20,12 +21,15 @@ return new class extends Migration
                 ->cascadeOnDelete();
 
             $table->string('queue_name');
+            $table->unsignedTinyInteger('priority');
             $table->timestamp('published_at')->nullable();
 
             $table->timestamps();
-
-            $table->index(['published_at', 'id']);
         });
+
+        DB::statement(
+            'CREATE INDEX notification_outbox_pending_priority_id_index ON notification_outbox (priority DESC, id) WHERE published_at IS NULL'
+        );
     }
 
     /**

@@ -34,7 +34,6 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->index('status');
             $table->index(['recipient_id', 'created_at']);
         });
     }
