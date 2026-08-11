@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\NotificationStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -36,6 +38,11 @@ return new class extends Migration
 
             $table->index(['recipient_id', 'created_at']);
         });
+
+        DB::statement(sprintf(
+            "CREATE INDEX notifications_stuck_queued_at_index ON notifications (queued_at) WHERE status = '%s'",
+            NotificationStatus::Queued->value,
+        ));
     }
 
     /**

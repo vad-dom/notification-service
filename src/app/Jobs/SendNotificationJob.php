@@ -17,6 +17,8 @@ class SendNotificationJob implements ShouldQueue
 {
     use Queueable;
 
+    public int $tries = 3;
+
     /**
      * Create a new job instance.
      */
@@ -24,6 +26,14 @@ class SendNotificationJob implements ShouldQueue
         public int $notificationId,
         public int $priority = NotificationPriority::Normal->value,
     ) {}
+
+    /**
+     * @return list<int>
+     */
+    public function backoff(): array
+    {
+        return [10, 30, 60];
+    }
 
     /**
      * Execute the job.
@@ -41,7 +51,7 @@ class SendNotificationJob implements ShouldQueue
                 ->with(['batch', 'recipient'])
                 ->findOrFail($this->notificationId);
 
-            if ($notification->status !== NotificationStatus::Queued) {
+            if (! $notification->status->isSendable()) {
                 return;
             }
 
@@ -79,8 +89,12 @@ class SendNotificationJob implements ShouldQueue
             return;
         }
 
+        if (! $notification->status->isSendable()) {
+            return;
+        }
+
         $notification->update([
-            'status' => NotificationStatus::Discarded,
+            'status' => NotificationStatus::Failed,
             'failure_reason' => $exception->getMessage(),
         ]);
 

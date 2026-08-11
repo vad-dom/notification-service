@@ -11,3 +11,7 @@ Artisan::command('inspire', function () {
 Schedule::command('notifications:publish-outbox')
     ->everyMinute()
     ->withoutOverlapping();
+
+Schedule::command('notifications:reconcile-stuck')
+    ->everyMinute()
+    ->withoutOverlapping();
