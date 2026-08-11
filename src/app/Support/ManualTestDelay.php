@@ -5,7 +5,7 @@ namespace App\Support;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Temporary helper for manual outbox testing. Set NOTIFICATION_MANUAL_TEST_DELAY_SECONDS=0 to disable.
+ * Applies optional delay from config notifications.manual_test_delay_seconds.
  */
 final class ManualTestDelay
 {

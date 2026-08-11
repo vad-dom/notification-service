@@ -51,13 +51,38 @@ RabbitMQ используется для асинхронной обработк
 
 * `pending` — запись создана, но еще не опубликована в очередь;
 * `queued` — запись успешно опубликована в очередь;
+* `reconciliation_pending` — recovery переотправил job для зависшего `queued`;
 * `sent` — уведомление передано провайдеру;
 * `delivered` — провайдер подтвердил доставку;
+* `failed` — внутренняя ошибка отправки после исчерпания retries job;
 * `discarded` — провайдер сообщил об ошибке доставки.
 
 Статус `pending` добавлен дополнительно, чтобы не считать уведомление поставленным в очередь до успешной публикации job.
 
-Recovery для таких записей реализован через transactional outbox: неопубликованные outbox-записи повторно обрабатываются `PublishNotificationOutboxJob`, scheduler-ом и artisan-командой `notifications:publish-outbox`.
+`failed` и `discarded` разделены намеренно: первый — сбой нашей отправки (например, отсутствует контакт получателя), второй — отказ провайдера после успешной передачи сообщения.
+
+### Recovery
+
+Recovery реализован двумя независимыми механизмами:
+
+#### 1. Outbox recovery (`pending` → `queued`)
+
+Transactional outbox: неопубликованные outbox-записи повторно обрабатываются:
+
+* `PublishNotificationOutboxJob` (очередь `notifications.outbox`);
+* scheduler и artisan-команда `notifications:publish-outbox`.
+
+Закрывает разрыв между commit в PostgreSQL и появлением job в RabbitMQ.
+
+#### 2. Reconciliation stuck queued (`queued` → `reconciliation_pending`)
+
+Если уведомление долго остаётся в `queued` (job потерян из очереди, worker недоступен и т.п.), scheduler и команда `notifications:reconcile-stuck` переотправляют `SendNotificationJob` и переводят запись в `reconciliation_pending`.
+
+Порог «зависания» задаётся `NOTIFICATION_STUCK_QUEUED_THRESHOLD_MINUTES` (например 5 минут).
+
+Статус `reconciliation_pending` нужен, чтобы scheduler не дублировал job бесконечно (пока штатная работа не восстановится) для одной и той же записи.
+
+`SendNotificationJob` обрабатывает и `queued`, и `reconciliation_pending` (метод `NotificationStatus::isSendable()`).
 
 ### Provider Event endpoint
 
@@ -111,8 +136,6 @@ POST /api/provider-events/delivery-status
 critical: 3-5 workers
 default: 1-2 workers
 ```
-
-В БД хранится приоритет, и реализован маппинг типа уведомления в приоритет, в качестве расширения можно передавать приоритет в RabbitMQ и использовать его в любой из очередей.
 
 ### NotificationType управляет priority и queue
 
@@ -175,8 +198,9 @@ RabbitMQ обеспечивает семантику at-least-once: сообще
 
 Чтобы не отправить одно уведомление повторно, используется защита на уровне бизнес-логики:
 
-* Redis lock;
-* проверка статуса уведомления в БД (job отправляет только уведомления в статусе `queued`).
+* Redis lock (`notification:{id}`);
+* проверка статуса в БД — job отправляет только уведомления в статусах `queued` и `reconciliation_pending` (`NotificationStatus::isSendable()`);
+* идемпотентность outbox relay (`published_at`, проверка `pending`).
 
 ### Получатели
 

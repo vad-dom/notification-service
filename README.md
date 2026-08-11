@@ -11,7 +11,7 @@
 ├── docker/                                      # настройки Docker (PHP, Nginx, init-скрипты)
 ├── src/
 │   ├── app/
-│   │   ├── Console/Commands/                   # artisan-команды (recovery outbox)
+│   │   ├── Console/Commands/                   # recovery: publish-outbox, reconcile-stuck
 │   │   ├── DTO/                                # DTO для входных данных и результатов сервисов
 │   │   ├── Enums/                              # статусы, каналы, типы и приоритеты уведомлений
 │   │   ├── Exceptions/                         # доменные и HTTP-aware исключения
@@ -27,10 +27,10 @@
 │   │   ├── OpenApi/                            # OpenAPI/Swagger описание
 │   │   ├── Services/
 │   │   │   ├── NotificationProviders/          # mock-провайдеры SMS/Email
-│   │   │   └── ...                             # batch, outbox, publisher, history, provider events
+│   │   │   └── ...                             # batch, outbox, publisher, reconciliation, history, provider events
 │   │   └── Support/                            # вспомогательные утилиты (manual test delay)
 │   ├── config/
-│   │   └── notifications.php                   # rate limit, outbox, manual test delay
+│   │   └── notifications.php                   # rate limit, outbox, reconciliation, manual test delay
 │   ├── database/
 │   │   ├── factories/                          # factories для тестов
 │   │   ├── migrations/                         # recipients, batches, notifications, outbox, jobs
@@ -61,10 +61,10 @@
     <ul>
       <li>поднимутся PostgreSQL, Redis, RabbitMQ, PHP-FPM, Nginx и worker-контейнеры;</li>
       <li>установятся PHP-зависимости;</li>
-      <li>создастся <code>.env</code> из <code>.env.example</code>, если его ещё нет;</li>
+      <li>создастся <code>.env</code> из <code>.env.example</code>, если его еще нет;</li>
       <li>выполнятся миграции;</li>
       <li>создадутся тестовые получатели через <code>RecipientSeeder</code>;</li>
-      <li>запустятся worker'ы для очередей <code>notifications.outbox</code>, <code>notifications.critical</code> и <code>notifications.default</code>, а также scheduler для recovery outbox.</li>
+      <li>запустятся worker'ы для очередей <code>notifications.outbox</code>, <code>notifications.critical</code> и <code>notifications.default</code>, а также scheduler для recovery-команд (<code>notifications:publish-outbox</code>, <code>notifications:reconcile-stuck</code>).</li>
     </ul>
   </li>
   <br>
@@ -142,6 +142,35 @@
 
 <h3>⚠️ Важно</h3>
 <p>Автоматические тесты используют SQLite in-memory базу, заданную в <code>phpunit.xml</code>. Основная PostgreSQL база при запуске тестов не очищается.</p>
+
+<br>
+<h2>⚙️ Переменные окружения <code>src/.env</code></h2>
+
+<h3>Лимиты API</h3>
+<ul>
+  <li><code>NOTIFICATION_BATCH_RATE_LIMIT_PER_MINUTE</code> — сколько batch-запросов разрешено с одного API-токена в минуту (защита от перегрузки).</li>
+  <li><code>NOTIFICATION_BATCH_RATE_LIMIT_DECAY_SECONDS</code> — через сколько секунд «окно» этого лимита сбрасывается.</li>
+</ul>
+
+<h3>Outbox (публикация в очередь)</h3>
+<ul>
+  <li><code>NOTIFICATION_OUTBOX_RELAY_QUEUE</code> — имя очереди RabbitMQ, в которую попадает job для relay outbox (по умолчанию <code>notifications.outbox</code>).</li>
+  <li><code>NOTIFICATION_OUTBOX_PUBLISH_LIMIT</code> — сколько неопубликованных outbox-записей обрабатывает одна команда <code>notifications:publish-outbox</code> за запуск.</li>
+</ul>
+
+<h3>Recovery для зависших <code>queued</code></h3>
+<ul>
+  <li><code>NOTIFICATION_STUCK_QUEUED_THRESHOLD_MINUTES</code> — через сколько минут в статусе <code>queued</code> уведомление считается «зависшим» и может быть переотправлено командой <code>notifications:reconcile-stuck</code>.</li>
+  <li><code>NOTIFICATION_RECONCILIATION_PUBLISH_LIMIT</code> — сколько таких уведомлений обрабатывается за один запуск reconcile.</li>
+</ul>
+
+<h3>Ручная проверка: <code>NOTIFICATION_MANUAL_TEST_DELAY_SECONDS</code></h3>
+
+<p>Пауза в секундах перед ключевыми шагами worker'ов. По умолчанию <code>0</code> — выключено.</p>
+
+<p>Зачем: при ручной проверке весь путь уведомления (API → outbox → очередь → отправка провайдеру) проходит слишком быстро — в RabbitMQ UI и PostgreSQL сложно увидеть промежуточные статусы (<code>pending</code>, <code>queued</code>), сообщения в разных очередях и работу recovery. Значение <code>15–30</code> замедляет worker'ы и дает время наблюдать.</p>
+
+<p>Задержка включается в <code>PublishNotificationOutboxJob</code> (relay outbox) и <code>SendNotificationJob</code> (отправка провайдеру). Для production и автотестов оставляйте <code>0</code>. После изменения — <code>php artisan config:clear</code>.</p>
 
 <br>
 <h2>🔄 Полная пересборка проекта</h2>
