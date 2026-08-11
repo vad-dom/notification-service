@@ -76,9 +76,9 @@ Transactional outbox: неопубликованные outbox-записи по�
 
 #### 2. Reconciliation stuck queued (`queued` → `reconciliation_pending`)
 
-Если уведомление долго остаётся в `queued` (job потерян из очереди, worker недоступен и т.п.), scheduler и команда `notifications:reconcile-stuck` переотправляют `SendNotificationJob` и переводят запись в `reconciliation_pending`.
+Если уведомление долго остается в `queued` (job потерян из очереди, worker недоступен и т.п.), scheduler и команда `notifications:reconcile-stuck` переотправляют `SendNotificationJob` и переводят запись в `reconciliation_pending`.
 
-Порог «зависания» задаётся `NOTIFICATION_STUCK_QUEUED_THRESHOLD_MINUTES` (например 5 минут).
+Порог «зависания» задается `NOTIFICATION_STUCK_QUEUED_THRESHOLD_MINUTES` (например 5 минут).
 
 Статус `reconciliation_pending` нужен, чтобы scheduler не дублировал job бесконечно (пока штатная работа не восстановится) для одной и той же записи.
 
@@ -119,10 +119,6 @@ POST /api/provider-events/delivery-status
 * `notifications.outbox` — relay outbox-записей в рабочие очереди;
 * `notifications.critical` — транзакционные уведомления;
 * `notifications.default` — маркетинговые уведомления.
-
-Транзакционные уведомления отправляются в critical queue.
-
-Маркетинговые уведомления отправляются в default queue.
 
 Причины:
 
@@ -182,13 +178,7 @@ notification:{id}
 POST /api/notification-batches
 ```
 
-Если один вызывающий сервис начнет отправлять слишком много batch-запросов, он будет временно ограничен. 
-
-При этом другие клиенты API смогут продолжить работу.
-
-Счетчики rate limit хранятся через Laravel RateLimiter в cache store. 
-
-Так как cache store настроен на Redis, эти счетчики хранятся в Redis.
+Если один вызывающий сервис начнет отправлять слишком много batch-запросов, он будет временно ограничен. При этом другие клиенты API смогут продолжить работу. Счетчики rate limit хранятся через Laravel RateLimiter в cache store. Так как cache store настроен на Redis, эти счетчики хранятся в Redis.
 
 В качестве расширения было бы полезно добавить контроль лимитов по провайдеру, получателю, типу уведомления. 
 
