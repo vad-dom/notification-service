@@ -117,8 +117,8 @@ POST /api/provider-events/delivery-status
 Используются очереди:
 
 * `notifications.critical` — транзакционные уведомления;
-* `notifications.default` — маркетинговые уведомления.
-* `notifications.outbox` — relay outbox-записей в рабочие очереди `critical` и `default`;
+* `notifications.default` — маркетинговые уведомления;
+* `notifications.outbox` — relay outbox-записей в рабочие очереди `critical` и `default`.
 
 Причины создания отдельных `critical` и `default`:
 
