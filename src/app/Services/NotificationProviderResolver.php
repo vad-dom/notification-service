@@ -2,26 +2,31 @@
 
 namespace App\Services;
 
-use App\Enums\NotificationChannel;
 use App\Interfaces\NotificationProviderInterface;
 use App\Models\Notification;
-use App\Services\NotificationProviders\EmailProviderMock;
-use App\Services\NotificationProviders\SmsProviderMock;
+use Illuminate\Contracts\Foundation\Application;
 use InvalidArgumentException;
 
 readonly class NotificationProviderResolver
 {
     public function __construct(
-        private SmsProviderMock $smsProvider,
-        private EmailProviderMock $emailProvider,
+        private Application $app,
     ) {}
 
     public function resolve(Notification $notification): NotificationProviderInterface
     {
-        return match ($notification->batch->channel) {
-            NotificationChannel::Sms => $this->smsProvider,
-            NotificationChannel::Email => $this->emailProvider,
-            default => throw new InvalidArgumentException('Unsupported notification channel.'),
-        };
+        $providerClass = config('notifications.providers.'.$notification->batch->channel->value);
+
+        if ($providerClass === null) {
+            throw new InvalidArgumentException('Unsupported notification channel.');
+        }
+
+        $provider = $this->app->make($providerClass);
+
+        if (! $provider instanceof NotificationProviderInterface) {
+            throw new InvalidArgumentException('Unsupported notification channel.');
+        }
+
+        return $provider;
     }
 }

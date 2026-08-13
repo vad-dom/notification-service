@@ -1,5 +1,8 @@
 <?php
 
+use App\Services\NotificationProviders\EmailProviderMock;
+use App\Services\NotificationProviders\SmsProviderMock;
+
 return [
     'rate_limit' => [
         'batch_requests_per_minute' => env('NOTIFICATION_BATCH_RATE_LIMIT_PER_MINUTE', 10),
@@ -17,4 +20,9 @@ return [
     ],
 
     'manual_test_delay_seconds' => env('NOTIFICATION_MANUAL_TEST_DELAY_SECONDS', 0),
+
+    'providers' => [
+        'sms' => SmsProviderMock::class,
+        'email' => EmailProviderMock::class,
+    ],
 ];
