@@ -18,18 +18,10 @@
                     "Notification batches"
                 ],
                 "summary": "Create notification batch",
-                "operationId": "bad3183c00495507ce64286ab69f63ea",
+                "operationId": "20539e408829b81092b6eb8cc2ff17e3",
                 "parameters": [
                     {
-                        "name": "Idempotency-Key",
-                        "in": "header",
-                        "description": "Unique UUID key for idempotent request processing",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                        "$ref": "#/components/parameters/IdempotencyKey"
                     }
                 ],
                 "requestBody": {
@@ -37,45 +29,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "channel",
-                                    "type",
-                                    "message",
-                                    "recipient_ids"
-                                ],
-                                "properties": {
-                                    "channel": {
-                                        "type": "string",
-                                        "example": "sms",
-                                        "enum": [
-                                            "sms",
-                                            "email"
-                                        ]
-                                    },
-                                    "type": {
-                                        "type": "string",
-                                        "example": "transactional",
-                                        "enum": [
-                                            "transactional",
-                                            "marketing"
-                                        ]
-                                    },
-                                    "message": {
-                                        "type": "string",
-                                        "example": "Your code: 1234"
-                                    },
-                                    "recipient_ids": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "integer"
-                                        },
-                                        "example": [
-                                            1,
-                                            2
-                                        ]
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/CreateNotificationBatchRequest"
                             }
                         }
                     }
@@ -124,7 +78,7 @@
                     "Notification history"
                 ],
                 "summary": "Get recipient notification history",
-                "operationId": "f6ceaff639f2e8802d3d4770148d3825",
+                "operationId": "f4886fff5448f50715b35ae8ce903cce",
                 "parameters": [
                     {
                         "name": "recipient",
@@ -177,36 +131,13 @@
                     "Provider events"
                 ],
                 "summary": "Handle provider delivery status event",
-                "operationId": "d2180a591aca11744b6dcc39cdcc96a7",
+                "operationId": "6b1ab2fa692e4dfcca6d4ed8a9cc0a0b",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "provider_message_id",
-                                    "status"
-                                ],
-                                "properties": {
-                                    "provider_message_id": {
-                                        "type": "string",
-                                        "example": "sms-1"
-                                    },
-                                    "status": {
-                                        "type": "string",
-                                        "example": "delivered",
-                                        "enum": [
-                                            "delivered",
-                                            "discarded"
-                                        ]
-                                    },
-                                    "failure_reason": {
-                                        "type": "string",
-                                        "example": "Invalid phone number",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/ProviderDeliveryStatusRequest"
                             }
                         }
                     }
@@ -245,24 +176,122 @@
     },
     "components": {
         "schemas": {
+            "CreateNotificationBatchRequest": {
+                "required": [
+                    "channel",
+                    "type",
+                    "message",
+                    "recipient_ids"
+                ],
+                "properties": {
+                    "channel": {
+                        "type": "string",
+                        "example": "sms",
+                        "enum": [
+                            "sms",
+                            "email"
+                        ]
+                    },
+                    "type": {
+                        "type": "string",
+                        "example": "transactional",
+                        "enum": [
+                            "transactional",
+                            "marketing"
+                        ]
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Your code: 1234"
+                    },
+                    "recipient_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "example": [
+                            1,
+                            2
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "NotificationBatchData": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "accepted"
+                    },
+                    "notifications_count": {
+                        "type": "integer",
+                        "example": 2
+                    }
+                },
+                "type": "object"
+            },
             "NotificationBatchResponse": {
                 "properties": {
                     "data": {
-                        "properties": {
-                            "id": {
-                                "type": "integer",
-                                "example": 1
-                            },
-                            "status": {
-                                "type": "string",
-                                "example": "accepted"
-                            },
-                            "notifications_count": {
-                                "type": "integer",
-                                "example": 2
-                            }
-                        },
-                        "type": "object"
+                        "$ref": "#/components/schemas/NotificationBatchData"
+                    }
+                },
+                "type": "object"
+            },
+            "NotificationHistoryItem": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "channel": {
+                        "type": "string",
+                        "example": "sms"
+                    },
+                    "type": {
+                        "type": "string",
+                        "example": "transactional"
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Your code: 1234"
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "sent"
+                    },
+                    "provider_message_id": {
+                        "type": "string",
+                        "example": "sms-1",
+                        "nullable": true
+                    },
+                    "failure_reason": {
+                        "type": "string",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "queued_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "sent_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "delivered_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"
@@ -272,58 +301,7 @@
                     "data": {
                         "type": "array",
                         "items": {
-                            "properties": {
-                                "id": {
-                                    "type": "integer",
-                                    "example": 1
-                                },
-                                "channel": {
-                                    "type": "string",
-                                    "example": "sms"
-                                },
-                                "type": {
-                                    "type": "string",
-                                    "example": "transactional"
-                                },
-                                "message": {
-                                    "type": "string",
-                                    "example": "Your code: 1234"
-                                },
-                                "status": {
-                                    "type": "string",
-                                    "example": "sent"
-                                },
-                                "provider_message_id": {
-                                    "type": "string",
-                                    "example": "sms-1",
-                                    "nullable": true
-                                },
-                                "failure_reason": {
-                                    "type": "string",
-                                    "example": null,
-                                    "nullable": true
-                                },
-                                "queued_at": {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "nullable": true
-                                },
-                                "sent_at": {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "nullable": true
-                                },
-                                "delivered_at": {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "nullable": true
-                                },
-                                "created_at": {
-                                    "type": "string",
-                                    "format": "date-time"
-                                }
-                            },
-                            "type": "object"
+                            "$ref": "#/components/schemas/NotificationHistoryItem"
                         }
                     },
                     "links": {
@@ -371,23 +349,65 @@
                 },
                 "type": "object"
             },
-            "ProviderEventResponse": {
+            "ProviderDeliveryStatusRequest": {
+                "required": [
+                    "provider_message_id",
+                    "status"
+                ],
                 "properties": {
-                    "data": {
-                        "properties": {
-                            "id": {
-                                "type": "integer",
-                                "example": 1
-                            },
-                            "status": {
-                                "type": "string",
-                                "example": "delivered"
-                            }
-                        },
-                        "type": "object"
+                    "provider_message_id": {
+                        "type": "string",
+                        "example": "sms-1"
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "delivered",
+                        "enum": [
+                            "delivered",
+                            "discarded"
+                        ]
+                    },
+                    "failure_reason": {
+                        "type": "string",
+                        "example": "Invalid phone number",
+                        "nullable": true
                     }
                 },
                 "type": "object"
+            },
+            "ProviderEventData": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "delivered"
+                    }
+                },
+                "type": "object"
+            },
+            "ProviderEventResponse": {
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/ProviderEventData"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "parameters": {
+            "IdempotencyKey": {
+                "name": "Idempotency-Key",
+                "in": "header",
+                "description": "Unique UUID key for idempotent request processing",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "example": "550e8400-e29b-41d4-a716-446655440000"
             }
         },
         "securitySchemes": {
