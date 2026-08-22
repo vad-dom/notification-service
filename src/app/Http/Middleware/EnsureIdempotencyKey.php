@@ -21,7 +21,7 @@ class EnsureIdempotencyKey
         if (! $idempotencyKey) {
             return response()->json([
                 'message' => 'Idempotency-Key header is required.',
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            ], Response::HTTP_BAD_REQUEST);
         }
 
         if (! Str::isUuid($idempotencyKey)) {

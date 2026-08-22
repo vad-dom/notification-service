@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Notification;
 use App\Models\Recipient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
 class NotificationHistoryApiTest extends TestCase
@@ -77,5 +78,32 @@ class NotificationHistoryApiTest extends TestCase
         $secondPageIds = collect($secondPageResponse->json('data'))->pluck('id');
 
         $this->assertTrue($firstPageIds->intersect($secondPageIds)->isEmpty());
+    }
+
+    public function test_recipient_notification_history_requires_api_token(): void
+    {
+        $recipient = Recipient::factory()->create();
+
+        $response = $this->getJson(
+            "/api/recipients/{$recipient->id}/notifications"
+        );
+
+        $response->assertStatus(Response::HTTP_UNAUTHORIZED);
+    }
+
+    public function test_recipient_notification_history_returns_not_found_for_missing_recipient(): void
+    {
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer test-token',
+        ])->getJson('/api/recipients/99999/notifications');
+
+        $response->assertNotFound();
+    }
+
+    public function test_recipient_notification_history_requires_api_token_for_missing_recipient(): void
+    {
+        $response = $this->getJson('/api/recipients/99999/notifications');
+
+        $response->assertStatus(Response::HTTP_UNAUTHORIZED);
     }
 }

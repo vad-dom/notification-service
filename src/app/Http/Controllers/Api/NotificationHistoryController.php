@@ -11,9 +11,11 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class NotificationHistoryController extends Controller
 {
     public function index(
-        Recipient $recipient,
+        int $recipient,
         NotificationHistoryService $service
     ): AnonymousResourceCollection {
+        $recipient = Recipient::query()->findOrFail($recipient);
+
         return NotificationHistoryResource::collection(
             $service->paginateForRecipient($recipient)
         );

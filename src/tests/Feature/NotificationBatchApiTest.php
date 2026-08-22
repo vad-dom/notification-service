@@ -43,7 +43,7 @@ class NotificationBatchApiTest extends TestCase
             'recipient_ids' => [1, 2],
         ]);
 
-        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $response->assertStatus(Response::HTTP_BAD_REQUEST);
     }
 
     public function test_store_creates_notification_batch(): void
